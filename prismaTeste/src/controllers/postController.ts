@@ -1,0 +1,83 @@
+import type { Request, Response } from "express";
+import { prisma } from "../database";
+
+export const postController = {
+  getAllPosts: async (req: Request, res: Response) => {
+    try {
+      const posts = await prisma.post.findMany({
+        orderBy: { createdAt: "desc" },
+        include: {
+          author: true,
+        },
+      });
+      res.json(posts);
+    } catch (error) {
+      res.status(500).json({ error: "Erro ao buscar posts" });
+    }
+  },
+
+  getPostById: async (req: Request, res: Response) => {
+    const { id } = req.params;
+    try {
+      const post = await prisma.post.findUnique({
+        where: { id: Number(id) },
+        include: { author: true },
+      });
+      if (post) {
+        res.json(post);
+      } else {
+        res.status(404).json({ error: "Post não encontrado" });
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Erro ao buscar post" });
+    }
+  },
+
+  getPostsByAuthor: async (req: Request, res: Response) => {
+    const { title, content, published, authorId } = req.body;
+    try {
+      const newPost = await prisma.post.create({
+        data: {
+          title,
+          content,
+          published,
+          authorId,
+        },
+      });
+      res.status(201).json(newPost);
+    } catch (error) {
+      res.status(500).json({ error: "Erro ao criar post" });
+    }
+  },
+
+  filterPosts: async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { title, content, published } = req.body;
+    try {
+      const updatedPost = await prisma.post.update({
+        where: { id: Number(id) },
+        data: {
+          title,
+          content,
+          published,
+        },
+        include: { author: true },
+      });
+      res.json(updatedPost);
+    } catch (error) {
+      res.status(500).json({ error: "Erro ao atualizar post" });
+    }
+  },
+
+  deletePost: async (req: Request, res: Response) => {
+    const { id } = req.params;
+    try {
+      await prisma.post.delete({
+        where: { id: Number(id) },
+      });
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Erro ao deletar post" });
+    }
+  },
+};
