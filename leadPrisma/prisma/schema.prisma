@@ -1,0 +1,76 @@
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Group {
+  id          Int    @id @default(autoincrement())
+  name        String @db.VarChar(255)
+  description String
+  leads       Lead[] @relation("GroupLeads")
+}
+
+
+//usando enum para criar uma lista de possiveis status para os leads, facilitando a manutenção e a leitura do código.
+enum LeadStatus {
+  New
+  Contacted
+  Qualified
+  Converted
+  Unresponsive
+  Disqualified
+  Archived
+}
+
+//Tabela de Lead para armazenar as informações dos leads, como nome, email, telefone e status. A relação entre leads e grupos é feita através da tabela intermediária GroupLeads, permitindo que um lead possa pertencer a vários grupos e um grupo possa conter vários leads. A tabela de Lead também possui uma relação com a tabela de Campanhas através da tabela intermediária LeadCampaign, permitindo que um lead possa estar associado a várias campanhas e uma campanha possa conter vários leads.
+model Lead {
+  id        Int            @id @default(autoincrement())
+  name      String         @db.VarChar(255)
+  email     String         @unique @db.VarChar(255)
+  phone     String         @db.VarChar(255)
+  status    LeadStatus     @default(New)
+  groups    Group[]        @relation("GroupLeads")
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  campaigns LeadCampaign[]
+}
+
+//Tabela de campanha  para armazenar as infromaçoes das campanhas de marketing, como nome, descrição, data de início e término. A relação entre leads e campanhas é feita através da tabela intermediária LeadCampaign, que também armazena o status do lead em relação à campanha específica.
+model Campaign {
+  id          Int            @id @default(autoincrement())
+  name        String         @db.VarChar(255)
+  description String
+  startDate   DateTime      
+  endDate     DateTime?
+  leads       LeadCampaign[]
+}
+
+enum LeadCampaignStatus {
+  New
+  Engaged
+  FollowUp_Scheduled
+  Contacted
+  Qualified
+  Converted
+  Unresponsive
+  Disqualified
+  Re_Engaged
+  Opted_Out
+}
+
+//Tabela intermediária para representar a relação muitos-para-muitos entre leads e campanhas, permitindo que um lead possa estar associado a várias campanhas e uma campanha possa conter vários leads. A tabela também armazena o status do lead em relação à campanha específica, facilitando o acompanhamento do progresso do lead em cada campanha.
+model LeadCampaign {
+  leadId     Int
+  campaignId Int
+  status     LeadCampaignStatus @default(New)
+  campaign   Campaign           @relation(fields: [campaignId], references: [id])
+  lead       Lead               @relation(fields: [leadId], references: [id])
+
+  @@id([leadId, campaignId])
+}
